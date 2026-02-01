@@ -26,6 +26,6 @@ xcuserdata/
 # Project residue
 FlipClockApp
 main.o
-v*/
+v[0-9]*/
 Dist_Temp/
 *.dmg
