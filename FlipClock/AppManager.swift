@@ -130,6 +130,13 @@ class FlipClockManager: ObservableObject {
     @Published var onlineImageURL: String = "" {
         didSet { if !isLoading { saveSettings() } }
     }
+    @Published var isUpdateAvailable: Bool = false
+    @Published var latestVersion: String = ""
+    @Published var updateURL: String = ""
+    @Published var isCheckingUpdates: Bool = false
+    @Published var showUpdateAlert: Bool = false
+    @Published var updateAlertTitle: String = ""
+    @Published var updateAlertMessage: String = ""
     
     let presetColors: [Color] = [
         .black, .white, .gray, 
@@ -154,7 +161,8 @@ class FlipClockManager: ObservableObject {
             "save_current_as_theme": "Save current as theme", "theme_name": "Theme Name", "cancel": "Cancel", "date_format": "Date Format", "ampm_size": "AM/PM Size",
             "date_size": "Date Size", "seconds_size": "Seconds Size",
             "tab_general": "General", "tab_appearance": "Appearance", "tab_time": "Time & Date", "tab_saver": "ScreenSaver", "tab_info": "Info",
-            "follow_system": "Follow System Appearance", "select_image": "Select Background Image", "web_url": "Website URL", "image_url": "Image URL"
+            "follow_system": "Follow System Appearance", "select_image": "Select Background Image", "web_url": "Website URL", "image_url": "Image URL",
+            "check_updates": "Check for Updates", "update_available": "New version available", "is_latest": "Already on latest version"
         ],
         .korean: [
             "settings": "설정", "language": "언어", "themes": "테마", "standard": "기본 테마", "my_presets": "나의 프리셋",
@@ -169,7 +177,8 @@ class FlipClockManager: ObservableObject {
             "save_current_as_theme": "현재 설정을 테마로 저장", "theme_name": "테마 이름", "cancel": "취소", "date_format": "날짜 형식", "ampm_size": "AM/PM 크기",
             "date_size": "날짜 크기", "seconds_size": "초 크기",
             "tab_general": "일반", "tab_appearance": "외형", "tab_time": "시간 및 날짜", "tab_saver": "화면보호기", "tab_info": "정보",
-            "follow_system": "시스템 설정에 따라 테마 변경", "select_image": "배경 이미지 선택", "web_url": "웹사이트 URL", "image_url": "이미지 URL"
+            "follow_system": "시스템 설정에 따라 테마 변경", "select_image": "배경 이미지 선택", "web_url": "웹사이트 URL", "image_url": "이미지 URL",
+            "check_updates": "업데이트 확인", "update_available": "새로운 버전이 있습니다", "is_latest": "최신 버전을 사용 중입니다"
         ]
     ]
     
@@ -177,6 +186,7 @@ class FlipClockManager: ObservableObject {
     
     private init() {
         loadCustomPresets(); loadCustomThemes(); loadSettings(); self.isLoading = false; updateActivationPolicy()
+        checkForUpdates()
         DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
             if self?.followSystemAppearance == true { self?.updateThemeForSystem() }
         }
@@ -290,6 +300,55 @@ class FlipClockManager: ObservableObject {
             NSApp.activate(ignoringOtherApps: true)
             NSApplication.shared.windows.forEach { if $0.isVisible { $0.makeKeyAndOrderFront(nil) } }
         }
+    }
+    
+    func checkForUpdates() {
+        guard !isCheckingUpdates else { return }
+        isCheckingUpdates = true
+        
+        guard let url = URL(string: "https://api.github.com/repos/orion-gz/FlipClock/releases/latest") else {
+            isCheckingUpdates = false
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                self?.isCheckingUpdates = false
+                
+                if let error = error {
+                    self?.updateAlertTitle = "Error"
+                    self?.updateAlertMessage = error.localizedDescription
+                    self?.showUpdateAlert = true
+                    return
+                }
+                
+                guard let data = data,
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let tagName = json["tag_name"] as? String,
+                      let htmlURL = json["html_url"] as? String else {
+                    self?.updateAlertTitle = "Error"
+                    self?.updateAlertMessage = "Could not parse update info."
+                    self?.showUpdateAlert = true
+                    return
+                }
+                
+                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+                self?.latestVersion = tagName
+                self?.updateURL = htmlURL
+                
+                if tagName.compare(currentVersion, options: .numeric) == .orderedDescending {
+                    self?.isUpdateAvailable = true
+                    self?.updateAlertTitle = self?.localized("update_available") ?? "Update Available"
+                    self?.updateAlertMessage = "New version \(tagName) is available."
+                    self?.showUpdateAlert = true
+                } else {
+                    self?.isUpdateAvailable = false
+                    self?.updateAlertTitle = self?.localized("settings") ?? "Settings"
+                    self?.updateAlertMessage = self?.localized("is_latest") ?? "Already on latest version"
+                    self?.showUpdateAlert = true
+                }
+            }
+        }.resume()
     }
     
     private func saveSettings() {

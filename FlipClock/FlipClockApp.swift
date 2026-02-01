@@ -462,9 +462,39 @@ struct SettingsView: View {
                                 Text("macOS Flip Clock")
                                     .font(.title)
                                     .fontWeight(.bold)
-                                Text("Version 1.0.0")
+                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
+                                
+                                if mgr.isUpdateAvailable {
+                                    Button(action: { NSWorkspace.shared.open(URL(string: mgr.updateURL)!) }) {
+                                        HStack {
+                                            Image(systemName: "arrow.down.circle.fill")
+                                            Text("\(mgr.localized("update_available")): \(mgr.latestVersion)")
+                                        }
+                                        .padding(.vertical, 4)
+                                        .padding(.horizontal, 12)
+                                        .background(Color.green.opacity(0.2))
+                                        .foregroundColor(.green)
+                                        .cornerRadius(20)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                } else {
+                                    Button(action: { mgr.checkForUpdates() }) {
+                                        HStack {
+                                            if mgr.isCheckingUpdates {
+                                                ProgressView().controlSize(.small).padding(.trailing, 5)
+                                                Text("Checking...")
+                                            } else {
+                                                Text(mgr.localized("check_updates"))
+                                            }
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .disabled(mgr.isCheckingUpdates)
+                                }
                             }
                             .padding(.top, 20)
                             
@@ -519,6 +549,13 @@ struct SettingsView: View {
         .background(BlockWindowDrag())
         .background(Color(NSColor.windowBackgroundColor))
         .shadow(radius: 20)
+        .alert(isPresented: $mgr.showUpdateAlert) {
+            Alert(
+                title: Text(mgr.updateAlertTitle),
+                message: Text(mgr.updateAlertMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .sheet(isPresented: $showCP) {
             ColorPickerView(selectedColor: $newC, onSave: { n in
                 mgr.addPreset(name: n, color: newC)

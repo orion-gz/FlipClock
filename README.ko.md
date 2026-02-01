@@ -2,6 +2,8 @@
 
 SwiftUI 기반의 macOS용 커스텀 플립 시계 애플리케이션
 
+![screenshot](./Screenshot/screenshot_black.png)
+
 [English Version](./README.md)
 
 ## 주요 기능

@@ -2,6 +2,8 @@
 
 A customizable Flip Clock application for macOS built with SwiftUI.
 
+![screenshot](./Screenshot/screenshot_black.png)
+
 [🇰🇷 한국어 버전](./README.ko.md)
 
 ## Features
