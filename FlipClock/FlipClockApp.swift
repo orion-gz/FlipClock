@@ -401,6 +401,37 @@ struct SettingsView: View {
                                         }
                                         .padding(.horizontal, 5)
                                         
+                                        HStack {
+                                            Text(mgr.localized("font"))
+                                                .font(.subheadline)
+                                            Spacer()
+                                            Picker("", selection: $mgr.dateFont) { 
+                                                ForEach(ClockFont.allCases) { 
+                                                    Text($0.rawValue).tag($0) 
+                                                } 
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 120)
+                                        }
+                                        .padding(.horizontal, 5)
+                                        
+                                        if mgr.dateFont == .system {
+                                            HStack {
+                                                Text("System Font")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.secondary)
+                                                Spacer()
+                                                Picker("", selection: $mgr.dateCustomFontName) {
+                                                    ForEach(NSFontManager.shared.availableFontFamilies.sorted(), id: \.self) { family in
+                                                        Text(family).tag(family)
+                                                    }
+                                                }
+                                                .pickerStyle(.menu)
+                                                .frame(width: 180)
+                                            }
+                                            .padding(.leading, 15)
+                                        }
+                                        
                                         Text(mgr.localized("date_format"))
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
@@ -462,7 +493,7 @@ struct SettingsView: View {
                                 Text("macOS Flip Clock")
                                     .font(.title)
                                     .fontWeight(.bold)
-                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1")")
+                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.2")")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 
@@ -643,7 +674,7 @@ struct ContentView: View {
                 Spacer()
                 if mgr.dateDisplay { 
                     Text(dateStr)
-                        .font(.system(size: 20 * mgr.clockScale * mgr.dateScale, weight: .medium, design: .rounded))
+                        .font(dateFont)
                         .foregroundColor(mgr.textColor.opacity(0.8))
                         .padding(.bottom, 10) 
                 }
@@ -829,6 +860,17 @@ struct ContentView: View {
         f.locale = Locale(identifier: mgr.language.rawValue)
         return f.string(from: time) 
     }
+    
+    var dateFont: Font {
+        let size = 20 * mgr.clockScale * mgr.dateScale
+        switch mgr.dateFont {
+        case .rounded: return .system(size: size, weight: .medium, design: .rounded)
+        case .monospaced: return .system(size: size, weight: .medium, design: .monospaced)
+        case .serif: return .system(size: size, weight: .medium, design: .serif)
+        case .digital: return .custom("Courier", size: size).weight(.medium)
+        case .system: return .custom(mgr.dateCustomFontName, size: size).weight(.medium)
+        }
+    }
 }
 
 struct WindowAccessor: NSViewRepresentable {
@@ -919,6 +961,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         w.contentView = NSHostingView(rootView: ContentView())
         w.makeKeyAndOrderFront(nil)
         w.level = FlipClockManager.shared.alwaysOnTop ? .floating : .normal
+        w.collectionBehavior = [.fullScreenPrimary, .managed]
         windows.append(w)
     }
     
@@ -975,14 +1018,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func triggerScreenSaver() { activateScreenSaver() }
     
-    func activateScreenSaver() { 
-        DispatchQueue.main.async { 
+    func activateScreenSaver() {
+        DispatchQueue.main.async {
             FlipClockManager.shared.showSettingsPanel = false
             NSApp.activate(ignoringOtherApps: true)
-            for w in self.windows { 
-                if !w.styleMask.contains(.fullScreen) { w.toggleFullScreen(nil) } 
-            } 
-        } 
+            
+            if self.windows.isEmpty {
+                self.setupWindows()
+            }
+            
+            // Give the app a moment to activate before entering full screen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                for w in self.windows {
+                    w.makeKeyAndOrderFront(nil)
+                    if !w.styleMask.contains(.fullScreen) {
+                        w.toggleFullScreen(nil)
+                    }
+                }
+            }
+        }
     }
     
     func startIdleMonitoring() { 

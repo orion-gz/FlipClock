@@ -109,6 +109,12 @@ class FlipClockManager: ObservableObject {
     @Published var dateScale: Double = 1.0 {
         didSet { if !isLoading { checkAuto(); saveSettings() } }
     }
+    @Published var dateFont: ClockFont = .rounded {
+        didSet { if !isLoading { checkAuto(); saveSettings() } }
+    }
+    @Published var dateCustomFontName: String = "Helvetica" {
+        didSet { if !isLoading { checkAuto(); saveSettings() } }
+    }
     @Published var secondsScale: Double = 1.0 {
         didSet { if !isLoading { checkAuto(); saveSettings() } }
     }
@@ -236,10 +242,15 @@ class FlipClockManager: ObservableObject {
         clockScale = t.clockScale
         boxCornerRadius = t.boxCornerRadius
         clockFont = t.clockFont
+        customFontName = t.customFontName
         backgroundType = t.backgroundType
         showSeconds = t.showSeconds
         dateDisplay = t.dateDisplay
         dateDisplayFormat = t.dateDisplayFormat
+        dateFont = t.dateFont
+        dateCustomFontName = t.dateCustomFontName
+        dateScale = t.dateScale
+        secondsScale = t.secondsScale
         alwaysOnTop = t.alwaysOnTop
         showMenuBarIcon = t.showMenuBarIcon
         militaryTimeSound = t.militaryTimeSound
@@ -270,7 +281,7 @@ class FlipClockManager: ObservableObject {
     }
     
     private func createCustomTheme(name: String) -> CustomTheme { 
-        CustomTheme(id: UUID(), name: name, backgroundColor: NamedColor(name: "BG", color: backgroundColor), boxColor: NamedColor(name: "Box", color: boxColor), textColor: NamedColor(name: "Text", color: textColor), clockScale: clockScale, boxCornerRadius: boxCornerRadius, clockFont: clockFont, backgroundType: backgroundType, showSeconds: showSeconds, dateDisplay: dateDisplay, dateDisplayFormat: dateDisplayFormat, alwaysOnTop: alwaysOnTop, showMenuBarIcon: showMenuBarIcon, militaryTimeSound: militaryTimeSound, use24HourFormat: use24HourFormat, amPmBoxScale: amPmBoxScale, glassOpacity: glassOpacity, glassBlur: glassBlur, shadowIntensity: shadowIntensity, liquidGlassEnabled: liquidGlassEnabled, shadowEnabled: shadowEnabled, screenSaverEnabled: screenSaverEnabled, exitOnActivity: exitOnActivity, flipSoundEnabled: flipSoundEnabled, launchAtLogin: launchAtLogin, idleTimeMinutes: idleTimeMinutes) 
+        CustomTheme(id: UUID(), name: name, backgroundColor: NamedColor(name: "BG", color: backgroundColor), boxColor: NamedColor(name: "Box", color: boxColor), textColor: NamedColor(name: "Text", color: textColor), clockScale: clockScale, boxCornerRadius: boxCornerRadius, clockFont: clockFont, customFontName: customFontName, backgroundType: backgroundType, showSeconds: showSeconds, dateDisplay: dateDisplay, dateDisplayFormat: dateDisplayFormat, dateFont: dateFont, dateCustomFontName: dateCustomFontName, dateScale: dateScale, secondsScale: secondsScale, alwaysOnTop: alwaysOnTop, showMenuBarIcon: showMenuBarIcon, militaryTimeSound: militaryTimeSound, use24HourFormat: use24HourFormat, amPmBoxScale: amPmBoxScale, glassOpacity: glassOpacity, glassBlur: glassBlur, shadowIntensity: shadowIntensity, liquidGlassEnabled: liquidGlassEnabled, shadowEnabled: shadowEnabled, screenSaverEnabled: screenSaverEnabled, exitOnActivity: exitOnActivity, flipSoundEnabled: flipSoundEnabled, launchAtLogin: launchAtLogin, idleTimeMinutes: idleTimeMinutes) 
     }
     
     func removeTheme(_ t: CustomTheme) { 
@@ -353,7 +364,7 @@ class FlipClockManager: ObservableObject {
                     }
                     return
                 }
-                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
+                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.2"
                 self?.latestVersion = tagName
                 self?.updateURL = htmlURL
                 let cleanTag = tagName.lowercased().replacingOccurrences(of: "v", with: "")
@@ -431,6 +442,8 @@ class FlipClockManager: ObservableObject {
         d.set(dateDisplay, forKey: "dateDisplay")
         d.set(dateDisplayFormat.rawValue, forKey: "dateDisplayFormat")
         d.set(dateScale, forKey: "dateScale")
+        d.set(dateFont.rawValue, forKey: "dateFont")
+        d.set(dateCustomFontName, forKey: "dateCustomFontName")
         d.set(secondsScale, forKey: "secondsScale")
         d.set(flipSoundEnabled, forKey: "flipSoundEnabled")
         d.set(launchAtLogin, forKey: "launchAtLogin")
@@ -448,8 +461,10 @@ class FlipClockManager: ObservableObject {
         lastUpdateCheckDate = d.object(forKey: "lastUpdateCheckDate") as? Date
         if d.object(forKey: "flipSoundEnabled") != nil { flipSoundEnabled = d.bool(forKey: "flipSoundEnabled") }
         if d.object(forKey: "launchAtLogin") != nil { launchAtLogin = d.bool(forKey: "launchAtLogin") }
-        if d.object(forKey: "hideDockIcon") != nil { hideDockIcon = d.bool(forKey: "hide_dock_icon") }
+        if d.object(forKey: "hideDockIcon") != nil { hideDockIcon = d.bool(forKey: "hideDockIcon") }
         if d.object(forKey: "dateScale") != nil { dateScale = d.double(forKey: "dateScale") }
+        if let dfRaw = d.string(forKey: "dateFont"), let df = ClockFont(rawValue: dfRaw) { dateFont = df }
+        if let dcfn = d.string(forKey: "dateCustomFontName") { dateCustomFontName = dcfn }
         if d.object(forKey: "secondsScale") != nil { secondsScale = d.double(forKey: "secondsScale") }
         if d.object(forKey: "followSystemAppearance") != nil { followSystemAppearance = d.bool(forKey: "followSystemAppearance") }
         if let bgi = d.string(forKey: "backgroundImagePath") { backgroundImagePath = bgi }

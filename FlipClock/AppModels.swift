@@ -166,9 +166,13 @@ struct CustomTheme: Identifiable, Codable, Equatable {
     var backgroundColor, boxColor, textColor: NamedColor
     var clockScale, boxCornerRadius: Double
     var clockFont: ClockFont
+    var customFontName: String
     var backgroundType: BackgroundType
     var showSeconds, dateDisplay: Bool
     var dateDisplayFormat: DateFormatOption
+    var dateFont: ClockFont
+    var dateCustomFontName: String
+    var dateScale, secondsScale: Double
     var alwaysOnTop, showMenuBarIcon, militaryTimeSound, use24HourFormat: Bool
     var amPmBoxScale, glassOpacity, glassBlur, shadowIntensity: Double
     var liquidGlassEnabled, shadowEnabled, screenSaverEnabled, exitOnActivity, flipSoundEnabled, launchAtLogin: Bool
