@@ -336,7 +336,10 @@ class FlipClockManager: ObservableObject {
                 self?.latestVersion = tagName
                 self?.updateURL = htmlURL
                 
-                if tagName.compare(currentVersion, options: .numeric) == .orderedDescending {
+                let cleanTag = tagName.lowercased().replacingOccurrences(of: "v", with: "")
+                let cleanCurrent = currentVersion.lowercased().replacingOccurrences(of: "v", with: "")
+                
+                if cleanTag.compare(cleanCurrent, options: .numeric) == .orderedDescending {
                     self?.isUpdateAvailable = true
                     self?.updateAlertTitle = self?.localized("update_available") ?? "Update Available"
                     self?.updateAlertMessage = "New version \(tagName) is available."
