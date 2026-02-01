@@ -52,9 +52,12 @@ struct RoundedRectangleBottomHalf: Shape {
 }
 
 struct AnyShape: Shape {
-    private let _p: (CGRect) -> Path
+    private let _p: @Sendable (CGRect) -> Path
     
-    init<S: Shape>(_ s: S) { _p = s.path }
+    init<S: Shape>(_ s: S) { 
+        let pathFunc = s.path
+        _p = { rect in pathFunc(rect) }
+    }
     
     func path(in r: CGRect) -> Path { _p(r) }
 }
@@ -444,7 +447,7 @@ struct FlipDigitView: View {
         .frame(width: 100 * scale, height: 140 * scale)
         .shadow(color: mgr.shadowEnabled ? .black.opacity(mgr.shadowIntensity) : .clear, 
                 radius: 10 * scale, x: 0, y: 5 * scale)
-        .onChange(of: value) { newValue in
+        .onChange(of: value) { _, newValue in
             if newValue != cur {
                 nxt = newValue
                 rot = 0
@@ -520,7 +523,7 @@ struct FlipTextView: View {
         .frame(width: 100 * scale, height: 140 * scale)
         .shadow(color: mgr.shadowEnabled ? .black.opacity(mgr.shadowIntensity) : .clear, 
                 radius: 10 * scale, x: 0, y: 5 * scale)
-        .onChange(of: text) { newValue in
+        .onChange(of: text) { _, newValue in
             if newValue != cur {
                 nxt = newValue
                 rot = 0

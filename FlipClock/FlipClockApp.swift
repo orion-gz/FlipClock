@@ -5,8 +5,6 @@ import Carbon
 import WebKit
 import UniformTypeIdentifiers
 
-// MARK: - Main Views
-
 class BlockMoveView: NSView { 
     override var mouseDownCanMoveWindow: Bool { false } 
 }
@@ -16,6 +14,22 @@ struct BlockWindowDrag: NSViewRepresentable {
         BlockMoveView() 
     }
     func updateNSView(_ nsView: BlockMoveView, context: Context) {}
+}
+
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
 }
 
 struct WebView: NSViewRepresentable {
@@ -70,7 +84,6 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text(mgr.localized("settings"))
                     .font(.title2)
@@ -85,7 +98,6 @@ struct SettingsView: View {
             }
             .padding()
             
-            // Liquid Glass Style Tab Bar
             HStack(spacing: 0) {
                 tabButton(idx: 0, title: mgr.localized("tab_general"), icon: "gearshape")
                 tabButton(idx: 1, title: mgr.localized("tab_appearance"), icon: "paintbrush")
@@ -98,11 +110,9 @@ struct SettingsView: View {
             
             Divider()
             
-            // Tab Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 25) {
                     if selectedTab == 0 {
-                        // General Tab
                         VStack(alignment: .leading, spacing: 15) {
                             HStack {
                                 Text(mgr.localized("language"))
@@ -140,7 +150,6 @@ struct SettingsView: View {
                             Toggle(mgr.localized("flip_sound"), isOn: $mgr.flipSoundEnabled)
                         }
                     } else if selectedTab == 1 {
-                        // Appearance Tab
                         VStack(alignment: .leading, spacing: 20) {
                             VStack(alignment: .leading, spacing: 15) {
                                 Text(mgr.localized("themes"))
@@ -264,9 +273,9 @@ struct SettingsView: View {
                                     HStack { 
                                         Text(mgr.localized("clock_size"))
                                         Spacer()
-                                        Text(String(format: "%.1fx", mgr.clockScale)) 
+                                        Text(String(format: "%.2fx", mgr.clockScale)) 
                                     }
-                                    Slider(value: $mgr.clockScale, in: 0.5...2.0)
+                                    Slider(value: $mgr.clockScale, in: 0.5...2.0, step: 0.05)
                                 }
                                 
                                 VStack {
@@ -351,7 +360,6 @@ struct SettingsView: View {
                             }
                         }
                     } else if selectedTab == 2 {
-                        // Time & Date Tab
                         VStack(alignment: .leading, spacing: 25) {
                             VStack(alignment: .leading, spacing: 15) {
                                 Text(mgr.localized("display_options"))
@@ -363,9 +371,9 @@ struct SettingsView: View {
                                         HStack { 
                                             Text(mgr.localized("ampm_size"))
                                             Spacer()
-                                            Text(String(format: "%.1fx", mgr.amPmBoxScale)) 
+                                            Text(String(format: "%.2fx", mgr.amPmBoxScale)) 
                                         }
-                                        Slider(value: $mgr.amPmBoxScale, in: 0.3...1.0)
+                                        Slider(value: $mgr.amPmBoxScale, in: 0.3...1.0, step: 0.05)
                                     }
                                     .padding(.leading, 20)
                                 }
@@ -376,9 +384,9 @@ struct SettingsView: View {
                                         HStack { 
                                             Text(mgr.localized("seconds_size"))
                                             Spacer()
-                                            Text(String(format: "%.1fx", mgr.secondsScale)) 
+                                            Text(String(format: "%.2fx", mgr.secondsScale)) 
                                         }
-                                        Slider(value: $mgr.secondsScale, in: 0.3...1.2)
+                                        Slider(value: $mgr.secondsScale, in: 0.3...1.2, step: 0.05)
                                     }
                                     .padding(.leading, 20)
                                 }
@@ -395,9 +403,9 @@ struct SettingsView: View {
                                             HStack { 
                                                 Text(mgr.localized("date_size"))
                                                 Spacer()
-                                                Text(String(format: "%.1fx", mgr.dateScale)) 
+                                                Text(String(format: "%.2fx", mgr.dateScale)) 
                                             }
-                                            Slider(value: $mgr.dateScale, in: 0.3...3.0)
+                                            Slider(value: $mgr.dateScale, in: 0.3...3.0, step: 0.05)
                                         }
                                         .padding(.horizontal, 5)
                                         
@@ -460,7 +468,6 @@ struct SettingsView: View {
                             Spacer()
                         }
                     } else if selectedTab == 3 {
-                        // ScreenSaver Tab
                         VStack(alignment: .leading, spacing: 20) {
                             Toggle(mgr.localized("enable_screensaver"), isOn: $mgr.screenSaverEnabled)
                                 .font(.headline)
@@ -484,7 +491,6 @@ struct SettingsView: View {
                             }
                         }
                     } else {
-                        // Info Tab
                         VStack(spacing: 25) {
                             VStack(spacing: 10) {
                                 Image(systemName: "clock.fill")
@@ -540,6 +546,10 @@ struct SettingsView: View {
                                             .frame(width: 100)
                                             .controlSize(.small)
                                         }
+                                        
+                                        Toggle(mgr.localized("enable_update_notif"), isOn: $mgr.enableUpdateNotification)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
                                     }
                                 }
                             }
@@ -738,6 +748,13 @@ struct ContentView: View {
                                   clockFont: mgr.clockFont)
                     
                     if mgr.showSeconds {
+                        if mgr.secondsScale == 1.0 {
+                            Text(":")
+                                .font(.system(size: 120 * mgr.clockScale, weight: .bold, design: .rounded))
+                                .foregroundColor(mgr.textColor)
+                                .padding(.bottom, 30)
+                        }
+                        
                         FlipDigitView(value: secs / 10, 
                                       color: mgr.textColor, 
                                       boxColor: mgr.boxColor, 
@@ -747,7 +764,7 @@ struct ContentView: View {
                                       glassOpacity: mgr.glassOpacity, 
                                       glassBlur: mgr.glassBlur, 
                                       clockFont: mgr.clockFont)
-                            .padding(.leading, 10 * mgr.clockScale)
+                            .padding(.leading, mgr.secondsScale == 1.0 ? 0 : 10 * mgr.clockScale)
                         
                         FlipDigitView(value: secs % 10, 
                                       color: mgr.textColor, 
@@ -776,6 +793,36 @@ struct ContentView: View {
                     .buttonStyle(PlainButtonStyle())
                     .padding() 
                 }
+            }
+            
+            if mgr.isUpdateAvailable && mgr.enableUpdateNotification {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 15) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.blue)
+                        Text("\(mgr.localized("update_available")): \(mgr.latestVersion)")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button(mgr.localized("release_notes")) {
+                            mgr.showUpdateAlert = true
+                        }
+                        .buttonStyle(BorderedButtonStyle())
+                        
+                        Button(action: { withAnimation { mgr.enableUpdateNotification = false } }) {
+                            Image(systemName: "xmark")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 15)
+                    .background(VisualEffectView(material: .hudWindow, blendingMode: .withinWindow).cornerRadius(10))
+                    .frame(maxWidth: 400)
+                    .padding(.bottom, 80)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(5)
             }
             
             if mgr.showSettingsPanel { 
@@ -897,6 +944,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         startIdleMonitoring()
         NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .keyDown, .leftMouseDown]) { _ in self.handleActivity() }
         NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .keyDown, .leftMouseDown]) { event in self.handleActivity(); return event }
+        
+        NotificationCenter.default.addObserver(forName: NSWindow.didExitFullScreenNotification, object: nil, queue: .main) { _ in
+            self.handleExitFullScreen()
+        }
+        
         setupHotKeyHandler()
         DispatchQueue.main.async { 
             self.setupWindows()
@@ -904,6 +956,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.observeSettings()
             self.registerGlobalShortcut() 
         }
+    }
+    
+    func handleExitFullScreen() {
+        self.setupWindows()
     }
     
     func registerGlobalShortcut() {
@@ -932,10 +988,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func setupWindows() {
         let oldWindows = windows
         windows.removeAll()
-        let mgr = FlipClockManager.shared
-        if mgr.multiMonitorMode == .all { 
-            for s in NSScreen.screens { createWindow(for: s) } 
-        } else if let p = NSScreen.main { 
+        if let p = NSScreen.screens.first { 
             createWindow(for: p) 
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { 
@@ -944,10 +997,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func createWindow(for screen: NSScreen) {
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700), 
+        let screenFrame = screen.frame
+        let width: CGFloat = 1000
+        let height: CGFloat = 700
+        let x = screenFrame.origin.x + (screenFrame.width - width) / 2
+        let y = screenFrame.origin.y + (screenFrame.height - height) / 2
+        
+        let w = NSWindow(contentRect: NSRect(x: x, y: y, width: width, height: height), 
                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], 
                          backing: .buffered, defer: false, screen: screen)
-        w.center()
+        
         w.title = "Flip Clock"
         w.isMovableByWindowBackground = true
         w.backgroundColor = .clear
@@ -955,9 +1014,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         w.isReleasedWhenClosed = false
         w.titlebarAppearsTransparent = true
         w.titleVisibility = .hidden
+        
         w.standardWindowButton(.closeButton)?.isHidden = false
         w.standardWindowButton(.miniaturizeButton)?.isHidden = false
         w.standardWindowButton(.zoomButton)?.isHidden = false
+        
         w.contentView = NSHostingView(rootView: ContentView())
         w.makeKeyAndOrderFront(nil)
         w.level = FlipClockManager.shared.alwaysOnTop ? .floating : .normal
@@ -983,10 +1044,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func handleActivity() { 
         lastActivityTime = Date()
-        if FlipClockManager.shared.exitOnActivity { 
+        
+        var wasInFullScreen = false
+        for w in windows { 
+            if w.styleMask.contains(.fullScreen) { 
+                wasInFullScreen = true
+                break
+            } 
+        }
+        
+        if wasInFullScreen && FlipClockManager.shared.exitOnActivity { 
             for w in windows { 
                 if w.styleMask.contains(.fullScreen) { w.toggleFullScreen(nil) } 
-            } 
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                self.setupWindows()
+            }
         } 
     }
     
@@ -1018,25 +1092,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func triggerScreenSaver() { activateScreenSaver() }
     
-    func activateScreenSaver() {
-        DispatchQueue.main.async {
+    func activateScreenSaver() { 
+        DispatchQueue.main.async { 
             FlipClockManager.shared.showSettingsPanel = false
             NSApp.activate(ignoringOtherApps: true)
             
-            if self.windows.isEmpty {
-                self.setupWindows()
+            let oldWindows = self.windows
+            self.windows.removeAll()
+            for s in NSScreen.screens {
+                self.createWindow(for: s)
             }
             
-            // Give the app a moment to activate before entering full screen
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { 
+                for w in oldWindows { w.close() }
                 for w in self.windows {
-                    w.makeKeyAndOrderFront(nil)
                     if !w.styleMask.contains(.fullScreen) {
                         w.toggleFullScreen(nil)
                     }
                 }
-            }
-        }
+            } 
+        } 
     }
     
     func startIdleMonitoring() { 
