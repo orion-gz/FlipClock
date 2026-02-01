@@ -37,6 +37,24 @@ enum MultiMonitorMode: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum UpdateCheckFrequency: String, Codable, CaseIterable, Identifiable {
+    case manual = "Manual"
+    case daily = "Daily"
+    case weekly = "Weekly"
+    case monthly = "Monthly"
+    
+    var id: String { rawValue }
+    
+    var days: Int {
+        switch self {
+        case .manual: return 0
+        case .daily: return 1
+        case .weekly: return 7
+        case .monthly: return 30
+        }
+    }
+}
+
 enum DateFormatOption: String, Codable, CaseIterable, Identifiable {
     case full = "full"
     case numericWithDay = "numDay"

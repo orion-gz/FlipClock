@@ -138,6 +138,13 @@ class FlipClockManager: ObservableObject {
     @Published var updateAlertTitle: String = ""
     @Published var updateAlertMessage: String = ""
     
+    @Published var updateCheckFrequency: UpdateCheckFrequency = .weekly {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var lastUpdateCheckDate: Date? {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    
     let presetColors: [Color] = [
         .black, .white, .gray, 
         Color(red: 0.2, green: 0.2, blue: 0.2), 
@@ -162,7 +169,8 @@ class FlipClockManager: ObservableObject {
             "date_size": "Date Size", "seconds_size": "Seconds Size",
             "tab_general": "General", "tab_appearance": "Appearance", "tab_time": "Time & Date", "tab_saver": "ScreenSaver", "tab_info": "Info",
             "follow_system": "Follow System Appearance", "select_image": "Select Background Image", "web_url": "Website URL", "image_url": "Image URL",
-            "check_updates": "Check for Updates", "update_available": "New version available", "is_latest": "Already on latest version"
+            "check_updates": "Check for Updates", "update_available": "New version available", "is_latest": "Already on latest version",
+            "update_freq": "Update Check Frequency"
         ],
         .korean: [
             "settings": "설정", "language": "언어", "themes": "테마", "standard": "기본 테마", "my_presets": "나의 프리셋",
@@ -178,7 +186,8 @@ class FlipClockManager: ObservableObject {
             "date_size": "날짜 크기", "seconds_size": "초 크기",
             "tab_general": "일반", "tab_appearance": "외형", "tab_time": "시간 및 날짜", "tab_saver": "화면보호기", "tab_info": "정보",
             "follow_system": "시스템 설정에 따라 테마 변경", "select_image": "배경 이미지 선택", "web_url": "웹사이트 URL", "image_url": "이미지 URL",
-            "check_updates": "업데이트 확인", "update_available": "새로운 버전이 있습니다", "is_latest": "최신 버전을 사용 중입니다"
+            "check_updates": "업데이트 확인", "update_available": "새로운 버전이 있습니다", "is_latest": "최신 버전을 사용 중입니다",
+            "update_freq": "업데이트 확인 주기"
         ]
     ]
     
@@ -186,7 +195,7 @@ class FlipClockManager: ObservableObject {
     
     private init() {
         loadCustomPresets(); loadCustomThemes(); loadSettings(); self.isLoading = false; updateActivationPolicy()
-        checkForUpdates()
+        checkIfUpdateNeeded()
         DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
             if self?.followSystemAppearance == true { self?.updateThemeForSystem() }
         }
@@ -302,53 +311,67 @@ class FlipClockManager: ObservableObject {
         }
     }
     
-    func checkForUpdates() {
+    func checkIfUpdateNeeded() {
+        guard updateCheckFrequency != .manual else { return }
+        if let lastCheck = lastUpdateCheckDate {
+            let daysSinceLastCheck = Calendar.current.dateComponents([.day], from: lastCheck, to: Date()).day ?? 0
+            if daysSinceLastCheck >= updateCheckFrequency.days {
+                checkForUpdates(isManual: false)
+            }
+        } else {
+            checkForUpdates(isManual: false)
+        }
+    }
+    
+    func checkForUpdates(isManual: Bool = true) {
         guard !isCheckingUpdates else { return }
         isCheckingUpdates = true
-        
         guard let url = URL(string: "https://api.github.com/repos/orion-gz/FlipClock/releases/latest") else {
             isCheckingUpdates = false
             return
         }
-        
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 self?.isCheckingUpdates = false
-                
+                self?.lastUpdateCheckDate = Date()
                 if let error = error {
-                    self?.updateAlertTitle = "Error"
-                    self?.updateAlertMessage = error.localizedDescription
-                    self?.showUpdateAlert = true
+                    if isManual {
+                        self?.updateAlertTitle = "Error"
+                        self?.updateAlertMessage = error.localizedDescription
+                        self?.showUpdateAlert = true
+                    }
                     return
                 }
-                
                 guard let data = data,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let tagName = json["tag_name"] as? String,
                       let htmlURL = json["html_url"] as? String else {
-                    self?.updateAlertTitle = "Error"
-                    self?.updateAlertMessage = "Could not parse update info."
-                    self?.showUpdateAlert = true
+                    if isManual {
+                        self?.updateAlertTitle = "Error"
+                        self?.updateAlertMessage = "Could not parse update info."
+                        self?.showUpdateAlert = true
+                    }
                     return
                 }
-                
-                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
                 self?.latestVersion = tagName
                 self?.updateURL = htmlURL
-                
                 let cleanTag = tagName.lowercased().replacingOccurrences(of: "v", with: "")
                 let cleanCurrent = currentVersion.lowercased().replacingOccurrences(of: "v", with: "")
-                
                 if cleanTag.compare(cleanCurrent, options: .numeric) == .orderedDescending {
                     self?.isUpdateAvailable = true
-                    self?.updateAlertTitle = self?.localized("update_available") ?? "Update Available"
-                    self?.updateAlertMessage = "New version \(tagName) is available."
-                    self?.showUpdateAlert = true
+                    if isManual {
+                        self?.updateAlertTitle = self?.localized("update_available") ?? "Update Available"
+                        self?.updateAlertMessage = "New version \(tagName) is available."
+                        self?.showUpdateAlert = true
+                    }
                 } else {
                     self?.isUpdateAvailable = false
-                    self?.updateAlertTitle = self?.localized("settings") ?? "Settings"
-                    self?.updateAlertMessage = self?.localized("is_latest") ?? "Already on latest version"
-                    self?.showUpdateAlert = true
+                    if isManual {
+                        self?.updateAlertTitle = self?.localized("settings") ?? "Settings"
+                        self?.updateAlertMessage = self?.localized("is_latest") ?? "Already on latest version"
+                        self?.showUpdateAlert = true
+                    }
                 }
             }
         }.resume()
@@ -366,6 +389,8 @@ class FlipClockManager: ObservableObject {
         d.set(multiMonitorMode.rawValue, forKey: "multiMonitorMode")
         d.set(hideDockIcon, forKey: "hideDockIcon")
         d.set(followSystemAppearance, forKey: "followSystemAppearance")
+        d.set(updateCheckFrequency.rawValue, forKey: "updateCheckFrequency")
+        if let lastCheck = lastUpdateCheckDate { d.set(lastCheck, forKey: "lastUpdateCheckDate") }
         if let bgi = backgroundImagePath { d.set(bgi, forKey: "backgroundImagePath") }
         d.set(backgroundWebURL, forKey: "backgroundWebURL")
         d.set(onlineImageURL, forKey: "onlineImageURL")
@@ -419,9 +444,11 @@ class FlipClockManager: ObservableObject {
         if let fString = d.string(forKey: "clockFont"), let f = ClockFont(rawValue: fString) { clockFont = f }
         if let bString = d.string(forKey: "backgroundType"), let b = BackgroundType(rawValue: bString) { backgroundType = b }
         if let mString = d.string(forKey: "multiMonitorMode"), let m = MultiMonitorMode(rawValue: mString) { multiMonitorMode = m }
+        if let ucfRaw = d.string(forKey: "updateCheckFrequency"), let ucf = UpdateCheckFrequency(rawValue: ucfRaw) { updateCheckFrequency = ucf }
+        lastUpdateCheckDate = d.object(forKey: "lastUpdateCheckDate") as? Date
         if d.object(forKey: "flipSoundEnabled") != nil { flipSoundEnabled = d.bool(forKey: "flipSoundEnabled") }
         if d.object(forKey: "launchAtLogin") != nil { launchAtLogin = d.bool(forKey: "launchAtLogin") }
-        if d.object(forKey: "hideDockIcon") != nil { hideDockIcon = d.bool(forKey: "hideDockIcon") }
+        if d.object(forKey: "hideDockIcon") != nil { hideDockIcon = d.bool(forKey: "hide_dock_icon") }
         if d.object(forKey: "dateScale") != nil { dateScale = d.double(forKey: "dateScale") }
         if d.object(forKey: "secondsScale") != nil { secondsScale = d.double(forKey: "secondsScale") }
         if d.object(forKey: "followSystemAppearance") != nil { followSystemAppearance = d.bool(forKey: "followSystemAppearance") }

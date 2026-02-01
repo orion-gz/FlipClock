@@ -462,7 +462,7 @@ struct SettingsView: View {
                                 Text("macOS Flip Clock")
                                     .font(.title)
                                     .fontWeight(.bold)
-                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
+                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1")")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 
@@ -480,20 +480,36 @@ struct SettingsView: View {
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 } else {
-                                    Button(action: { mgr.checkForUpdates() }) {
-                                        HStack {
-                                            if mgr.isCheckingUpdates {
-                                                ProgressView().controlSize(.small).padding(.trailing, 5)
-                                                Text("Checking...")
-                                            } else {
-                                                Text(mgr.localized("check_updates"))
+                                    VStack(spacing: 12) {
+                                        Button(action: { mgr.checkForUpdates(isManual: true) }) {
+                                            HStack {
+                                                if mgr.isCheckingUpdates {
+                                                    ProgressView().controlSize(.small).padding(.trailing, 5)
+                                                    Text("Checking...")
+                                                } else {
+                                                    Text(mgr.localized("check_updates"))
+                                                }
                                             }
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
                                         }
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
+                                        .buttonStyle(PlainButtonStyle())
+                                        .disabled(mgr.isCheckingUpdates)
+                                        
+                                        HStack {
+                                            Text(mgr.localized("update_freq"))
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Picker("", selection: $mgr.updateCheckFrequency) {
+                                                ForEach(UpdateCheckFrequency.allCases) { freq in
+                                                    Text(freq.rawValue).tag(freq)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(width: 100)
+                                            .controlSize(.small)
+                                        }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .disabled(mgr.isCheckingUpdates)
                                 }
                             }
                             .padding(.top, 20)
